@@ -3,12 +3,10 @@ import { useState, useEffect } from 'react'
 import TablaOrdenes from '@/components/TablaOrdenes'
 import TablaOdeis from '@/components/TablaOdeis'
 import LoadingSpinner from '@/components/LoadingSpinner'
-import ProyectoSelector from '@/components/ProyectoSelector'
+import ProyectoSelector, { GRUPO_ODEIS } from '@/components/ProyectoSelector'
 
-// Activa la vista agrupada por ODEI solo para el proyecto paraguas (sin departamento específico)
-// En BD: "ESTADISTICAS DEPARTAMENTALES" (codi_meta 0038)
-function esGrupoOdeis(nombreProyecto) {
-  return /^ESTADISTICAS\s+DEPARTAMENTALES\s*$/i.test(nombreProyecto.trim())
+function esGrupoOdeis(valor) {
+  return valor === GRUPO_ODEIS
 }
 
 function fmt(num) {

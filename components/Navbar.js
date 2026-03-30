@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation'
 
 const links = [
   { href: '/', label: 'Resumen' },
-  { href: '/mensual', label: 'Ejecución Mensual' },
   { href: '/mensual-detalle', label: 'Detalle Mensual' },
   { href: '/detalle', label: 'Detalle por Proyecto' },
 ]
