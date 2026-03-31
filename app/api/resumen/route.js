@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server'
 import { query } from '@/lib/db-pg'
 import { getCached, setCached, invalidarCache } from '@/lib/cache'
 
+// Datos MEF — Específica 1: Locación de Servicios por Persona Natural
+// Fuente: Consulta Amigable MEF · Corte: 28/02/2026
+// Actualizar estas env vars cuando el MEF publique el siguiente corte mensual
+const MEF = {
+  pia:            Number(process.env.PIA_LOCADORES       || '113219885'),
+  pim:            Number(process.env.PIM_LOCADORES       || '114458960'),
+  certificacion:  Number(process.env.CERTIFICACION_MEF   || '63587014'),
+  compromiso:     Number(process.env.COMPROMISO_MEF      || '62228551'),
+  acm:            Number(process.env.ACM_MEF             || '62027351'),
+  devengado:      Number(process.env.DEVENGADO_MEF       || '4851329'),
+  girado:         Number(process.env.GIRADO_MEF          || '4696602'),
+  fecha_corte:    process.env.FECHA_CONSULTA_MEF         || '28/02/2026',
+}
+
 export async function GET(request) {
   const refresh = new URL(request.url).searchParams.get('refresh')
   if (refresh) invalidarCache()
@@ -26,18 +40,17 @@ export async function GET(request) {
 
     const totales = proyectos.reduce(
       (acc, p) => ({
-        monto_armado:          acc.monto_armado          + Number(p.monto_armado),
-        monto_girado:          acc.monto_girado          + Number(p.monto_girado),
-        total_entregables:     acc.total_entregables     + Number(p.total_entregables),
-        entregables_girados:   acc.entregables_girados   + Number(p.entregables_girados),
-        entregables_pendientes:acc.entregables_pendientes+ Number(p.entregables_pendientes),
-        ordenes:               acc.ordenes               + Number(p.ordenes),
-        proveedores:           acc.proveedores           + Number(p.proveedores),
+        monto_armado:           acc.monto_armado           + Number(p.monto_armado),
+        monto_girado:           acc.monto_girado           + Number(p.monto_girado),
+        total_entregables:      acc.total_entregables      + Number(p.total_entregables),
+        entregables_girados:    acc.entregables_girados    + Number(p.entregables_girados),
+        entregables_pendientes: acc.entregables_pendientes + Number(p.entregables_pendientes),
+        ordenes:                acc.ordenes                + Number(p.ordenes),
+        proveedores:            acc.proveedores            + Number(p.proveedores),
       }),
       { monto_armado:0, monto_girado:0, total_entregables:0, entregables_girados:0, entregables_pendientes:0, ordenes:0, proveedores:0 }
     )
 
-    // Normalizar nombres a mayúsculas para compatibilidad con componentes existentes
     const proyectosNorm = proyectos.map(p => ({
       PROYECTO: p.proyecto, codi_Meta: p.codi_meta,
       ordenes: Number(p.ordenes), proveedores: Number(p.proveedores),
@@ -47,18 +60,28 @@ export async function GET(request) {
       entregables_pendientes: Number(p.entregables_pendientes),
     }))
 
+    // KPIs cruzados (Únete vs MEF)
+    const pct_ejecucion = MEF.pim > 0
+      ? ((totales.monto_girado / MEF.pim) * 100).toFixed(1)
+      : '0.0'
+    const pct_compromiso_pim = MEF.pim > 0
+      ? ((totales.monto_armado / MEF.pim) * 100).toFixed(1)
+      : '0.0'
+    const saldo_libre = MEF.pim - totales.monto_armado
+
     const responseData = {
       kpis: {
-        pim_total: Number(process.env.PIM_TOTAL),
-        pia_total: Number(process.env.PIA_TOTAL),
-        devengado_mef: Number(process.env.DEVENGADO_MEF),
-        girado_mef: Number(process.env.GIRADO_MEF),
-        avance_mef: Number(process.env.AVANCE_MEF),
-        fecha_consulta_mef: process.env.FECHA_CONSULTA_MEF,
+        // Datos MEF (Específica Locadores — corte mensual)
+        mef: MEF,
+        // Datos Únete (tiempo real desde detalle_cache)
         ...totales,
         pct_avance_locadores: totales.monto_armado > 0
           ? ((totales.monto_girado / totales.monto_armado) * 100).toFixed(1)
           : '0.0',
+        // KPIs cruzados
+        pct_ejecucion,          // Girado Únete / PIM MEF
+        pct_compromiso_pim,     // Comprometido Únete / PIM MEF
+        saldo_libre,            // PIM MEF - Comprometido Únete
       },
       proyectos: proyectosNorm,
     }
