@@ -50,15 +50,17 @@ async function sync() {
         CONVERT(varchar, d.FECHA_INICIO, 23)                       AS fecha_inicio,
         CONVERT(varchar, d.FECHA_FIN, 23)                          AS fecha_fin,
         CONVERT(varchar, d.FECHA_BAJA, 23)                         AS fecha_baja,
-        d.ESTADO_CONTRATO,
+        d.ESTADO_CONTRATO                                          AS estado_contrato,
         RTRIM(ISNULL(d.N_EXPEDIENTE,''))                           AS n_expediente,
         RTRIM(ISNULL(d.N_SUBEXPEDIENTE,''))                        AS n_subexpediente,
         RTRIM(ISNULL(d.ANIO_EXPEDIENTE,''))                        AS anio_expediente,
         RTRIM(ISNULL(d.N_ENTREGABLE,''))                           AS n_entregable,
         RTRIM(ISNULL(d.RUC,''))                                    AS ruc,
-        CAST(ISNULL(d.MONTO_GIRADO, '0') AS FLOAT)                 AS monto_girado,
-        d.FLAG_GIRADO,
-        CONVERT(varchar, d.FECHA_GIRADO, 23)                       AS fecha_girado,
+        -- FLAG_GIRADO en esta vista contiene el MONTO GIRADO (string numérico) cuando está pagado
+        -- MONTO_GIRADO contiene el NRO_ORDEN (columna renombrada en la vista)
+        CAST(ISNULL(NULLIF(RTRIM(d.FLAG_GIRADO),''), '0') AS FLOAT) AS monto_girado,
+        CASE WHEN d.FLAG_GIRADO IS NOT NULL THEN 1 ELSE NULL END   AS flag_girado,
+        NULL                                                        AS fecha_girado,
         g.CODESTADO                                                AS codestado
       FROM [dbo].[VISTA_DASHBOARD_DETALLE] d
       LEFT JOIN (
@@ -117,15 +119,15 @@ async function sync() {
           r.fecha_inicio || null,
           r.fecha_fin || null,
           r.fecha_baja || null,
-          r.ESTADO_CONTRATO ?? null,
+          r.estado_contrato ?? null,
           r.n_expediente || null,
           r.n_subexpediente || null,
           r.anio_expediente || null,
           r.n_entregable || null,
           r.ruc || null,
           r.monto_girado || 0,
-          r.FLAG_GIRADO ?? null,
-          r.fecha_girado || null,
+          r.flag_girado ?? null,
+          r.fecha_girado ?? null,
           r.codestado ?? null,
         )
         p += 21

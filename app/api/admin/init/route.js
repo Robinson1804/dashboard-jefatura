@@ -43,6 +43,8 @@ export async function POST(req) {
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_ruc         ON detalle_cache(ruc)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_flag_girado ON detalle_cache(flag_girado)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_fecha_fin   ON detalle_cache(fecha_fin)`)
+    // Migración: agregar columna si la tabla ya existía sin ella (debe ir ANTES del índice)
+    await query(`ALTER TABLE detalle_cache ADD COLUMN IF NOT EXISTS codestado INTEGER`)
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_codestado   ON detalle_cache(codestado)`)
 
     const [{ count }] = await query(`SELECT COUNT(*) AS count FROM detalle_cache`)
