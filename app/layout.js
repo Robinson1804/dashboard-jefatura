@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
       <body className={inter.className}>
         <AuthGuard>
           <Navbar />
-          <main className="max-w-screen-xl mx-auto px-6 py-6">
+          <main className="max-w-screen-2xl mx-auto px-4 py-6">
             {children}
           </main>
           <footer className="text-center text-xs text-gray-400 py-4 mt-8 border-t border-gray-200">
