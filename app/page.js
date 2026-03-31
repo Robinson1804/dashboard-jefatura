@@ -5,9 +5,6 @@ import TablaProyectos from '@/components/TablaProyectos'
 import CadenaPresupuestal from '@/components/CadenaPresupuestal'
 import LoadingSpinner from '@/components/LoadingSpinner'
 
-function fmt(n) {
-  return Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })
-}
 function fmtM(n) {
   return (Number(n) / 1_000_000).toFixed(1)
 }
@@ -37,7 +34,7 @@ function KpiCard({ titulo, valor, sub, fuente, color = 'blue', grande = false })
   )
 }
 
-// ── Semáforo de ritmo de ejecución ───────────────────────────────────────────
+// ── Semáforo vertical (uno debajo de otro) ───────────────────────────────────
 function Semaforo({ kpis }) {
   const mesActual = new Date().getMonth() + 1
   const pctAno = Math.round((mesActual / 12) * 100)
@@ -46,54 +43,53 @@ function Semaforo({ kpis }) {
   const girado = kpis.monto_girado
 
   const pctCompromiso = pim > 0 ? (comprometido / pim) * 100 : 0
-  const pctGirado = pim > 0 ? (girado / pim) * 100 : 0
   const idealAhora = pim * (mesActual / 12)
   const ritmoGiro = idealAhora > 0 ? (girado / idealAhora) * 100 : 0
 
   const indicadores = [
+    {
+      label: 'Mes del año',
+      valor: `${pctAno}%`,
+      desc: `Mes ${mesActual} de 12`,
+      estado: 'info',
+      nota: 'Referencia temporal',
+    },
     {
       label: 'Compromiso vs PIM',
       valor: `${pctCompromiso.toFixed(1)}%`,
       desc: `S/ ${fmtM(comprometido)}M de S/ ${fmtM(pim)}M`,
       estado: pctCompromiso >= pctAno ? 'ok' : pctCompromiso >= pctAno * 0.7 ? 'alerta' : 'mal',
       nota: pctCompromiso >= pctAno
-        ? `Por encima del ritmo esperado (${pctAno}%)`
-        : `Por debajo del ritmo anual (${pctAno}% del año)`,
+        ? `Sobre el ritmo anual (${pctAno}%)`
+        : `Bajo el ritmo anual (${pctAno}%)`,
     },
     {
       label: 'Ritmo de giro',
       valor: `${ritmoGiro.toFixed(0)}%`,
-      desc: `S/ ${fmtM(girado)}M girado · ideal S/ ${fmtM(idealAhora)}M`,
+      desc: `S/ ${fmtM(girado)}M · ideal S/ ${fmtM(idealAhora)}M`,
       estado: ritmoGiro >= 75 ? 'ok' : ritmoGiro >= 40 ? 'alerta' : 'mal',
-      nota: ritmoGiro >= 75 ? 'Giro dentro del ritmo esperado' : 'Ritmo de giro lento — entregables pendientes de pago',
-    },
-    {
-      label: 'Mes del año',
-      valor: `${pctAno}%`,
-      desc: `Mes ${mesActual} de 12`,
-      estado: 'info',
-      nota: `Referencia temporal para medir ritmo`,
+      nota: ritmoGiro >= 75 ? 'Dentro del ritmo' : 'Giro lento — pendientes de pago',
     },
   ]
 
   const colores = {
-    ok:     { dot: 'bg-green-500',  bg: 'bg-green-50  border-green-200',  text: 'text-green-700' },
-    alerta: { dot: 'bg-amber-500',  bg: 'bg-amber-50  border-amber-200',  text: 'text-amber-700' },
-    mal:    { dot: 'bg-red-500',    bg: 'bg-red-50    border-red-200',    text: 'text-red-700'   },
-    info:   { dot: 'bg-blue-400',   bg: 'bg-blue-50   border-blue-200',   text: 'text-blue-700'  },
+    ok:     { dot: 'bg-green-500', bg: 'bg-green-50 border-green-200',   text: 'text-green-700' },
+    alerta: { dot: 'bg-amber-500', bg: 'bg-amber-50 border-amber-200',   text: 'text-amber-700' },
+    mal:    { dot: 'bg-red-500',   bg: 'bg-red-50 border-red-200',       text: 'text-red-700'   },
+    info:   { dot: 'bg-blue-400',  bg: 'bg-blue-50 border-blue-200',     text: 'text-blue-700'  },
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
-      <h2 className="text-sm font-semibold text-gray-700 mb-3">Semáforo de ritmo de ejecución</h2>
-      <div className="grid grid-cols-3 gap-3">
+    <div className="bg-white rounded-lg border border-gray-200 p-5 h-full">
+      <h2 className="text-sm font-semibold text-gray-700 mb-3">Semáforo de ejecución</h2>
+      <div className="space-y-3">
         {indicadores.map(ind => {
           const c = colores[ind.estado]
           return (
             <div key={ind.label} className={`rounded-lg border p-3 ${c.bg}`}>
               <div className="flex items-center gap-2 mb-1">
                 <div className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
-                <p className="text-xs font-semibold text-gray-500 uppercase">{ind.label}</p>
+                <p className="text-[11px] font-semibold text-gray-500 uppercase">{ind.label}</p>
               </div>
               <p className={`text-2xl font-bold ${c.text}`}>{ind.valor}</p>
               <p className="text-xs text-gray-500 mt-0.5">{ind.desc}</p>
@@ -162,18 +158,6 @@ export default function ResumenPage() {
         </button>
       </div>
 
-      {/* Banner de desfase temporal */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 flex items-start gap-2 text-xs text-blue-700">
-        <span className="mt-0.5 shrink-0">ℹ</span>
-        <span>
-          <strong>Fuentes de datos:</strong> Los datos de PIM, Certificación, Compromiso MEF, Devengado y Girado MEF
-          provienen de la <strong>Consulta Amigable del MEF</strong> (actualización mensual · corte {mef.fecha_corte}).
-          Los datos de Compromiso y Girado del dashboard provienen de{' '}
-          <strong>Únete (tiempo real)</strong>. La diferencia entre ambas fuentes representa lo registrado
-          después del último corte SIAF.
-        </span>
-      </div>
-
       {/* KPIs principales — fila única */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <KpiCard
@@ -203,7 +187,7 @@ export default function ResumenPage() {
         <KpiCard
           titulo="Saldo Libre"
           valor={`S/ ${fmtM(kpis.saldo_libre)}M`}
-          sub={`PIM menos comprometido`}
+          sub="PIM menos comprometido"
           fuente="PIM MEF − Comprometido"
           color={kpis.saldo_libre > 0 ? 'indigo' : 'red'}
           grande
@@ -211,57 +195,27 @@ export default function ResumenPage() {
         <KpiCard
           titulo="% Ejecución"
           valor={`${kpis.pct_ejecucion}%`}
-          sub={`Girado / PIM · ${kpis.entregables_pendientes.toLocaleString()} entregables pendientes`}
+          sub={`${kpis.entregables_pendientes.toLocaleString()} entregables pendientes`}
           fuente="Girado Únete / PIM MEF"
           color={Number(kpis.pct_ejecucion) >= 20 ? 'green' : 'amber'}
           grande
         />
       </div>
 
-      {/* KPIs MEF secundarios */}
-      <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-          Cadena SIAF — MEF · Corte {mef.fecha_corte} · Específica: Locación de Servicios Persona Natural
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard
-            titulo="Certificación MEF"
-            valor={`S/ ${fmtM(mef.certificacion)}M`}
-            sub={`${((mef.certificacion / mef.pim) * 100).toFixed(1)}% del PIM`}
-            fuente={`MEF · ${mef.fecha_corte}`}
-            color="indigo"
+      {/* Fila: cadena (izquierda 2/3) + semáforo (derecha 1/3) */}
+      <div className="grid grid-cols-3 gap-5 items-start">
+        <div className="col-span-2">
+          <CadenaPresupuestal
+            mef={mef}
+            unete={{ monto_armado: kpis.monto_armado, monto_girado: kpis.monto_girado }}
           />
-          <KpiCard
-            titulo="Compromiso MEF"
-            valor={`S/ ${fmtM(mef.compromiso)}M`}
-            sub={`SIAF corte ${mef.fecha_corte}`}
-            fuente={`MEF · ${mef.fecha_corte}`}
-            color="blue"
-          />
-          <KpiCard
-            titulo="Devengado MEF"
-            valor={`S/ ${fmtM(mef.devengado)}M`}
-            sub="Obligación reconocida"
-            fuente={`MEF · ${mef.fecha_corte}`}
-            color="blue"
-          />
-          <KpiCard
-            titulo="Girado MEF"
-            valor={`S/ ${fmtM(mef.girado)}M`}
-            sub={`Avance ${((mef.girado / mef.pim) * 100).toFixed(1)}% del PIM`}
-            fuente={`MEF · ${mef.fecha_corte}`}
-            color="green"
-          />
+        </div>
+        <div>
+          <Semaforo kpis={kpis} />
         </div>
       </div>
 
-      {/* Semáforo */}
-      <Semaforo kpis={kpis} />
-
-      {/* Cadena presupuestal (funnel) */}
-      <CadenaPresupuestal mef={mef} />
-
-      {/* Gráfico */}
+      {/* Top 15 proyectos */}
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Top 15 proyectos — Compromiso Anual vs Girado</h2>
         <p className="text-xs text-gray-400 mb-4">Fuente: Únete · Datos en tiempo real</p>

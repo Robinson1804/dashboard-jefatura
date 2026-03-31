@@ -13,7 +13,7 @@ const MEF = {
   acm:            Number(process.env.ACM_MEF             || '62027351'),
   devengado:      Number(process.env.DEVENGADO_MEF       || '4851329'),
   girado:         Number(process.env.GIRADO_MEF          || '4696602'),
-  fecha_corte:    process.env.FECHA_CONSULTA_MEF         || '28/02/2026',
+  fecha_corte:    process.env.FECHA_CONSULTA_MEF         || '31/03/2026',
 }
 
 export async function GET(request) {
