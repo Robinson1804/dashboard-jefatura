@@ -1,8 +1,10 @@
 'use client'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, LabelList
+  ResponsiveContainer, LabelList
 } from 'recharts'
+
+const ES_ODEI = n => /estadistica.*departamental/i.test(n)
 
 function formatMiles(value) {
   if (value >= 1_000_000) return `S/ ${(value / 1_000_000).toFixed(1)}M`
@@ -10,15 +12,29 @@ function formatMiles(value) {
   return `S/ ${value}`
 }
 
+// Nombre corto para el eje Y
+function shortName(proyecto) {
+  return proyecto
+    .replace(/^ENCUESTA\s+(PERMANENTE\s+DE\s+)?/i, 'Enc. ')
+    .replace(/^IMPLEMENTACIÓN\s+DEL?\s+SISTEMA\s+(DE\s+)?/i, 'Impl. ')
+    .replace(/^CENSOS\s+NACIONALES:.*/i, 'Censos Nacionales')
+    .replace(/^PROGRAMA\s+/i, 'Prog. ')
+    .replace(/^INDICADORES\s+/i, 'Ind. ')
+    .replace(/^ELABORACION\s+(DE\s+LAS?\s+)?/i, 'Elab. ')
+    .replace(/^CONDUCCIÓN\s+DE\s+LÍNEAS\s+/i, 'Cond. Líneas ')
+    .replace(/^PLANEAMIENTO,\s+/i, 'Planeam., ')
+    .slice(0, 26)
+}
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   const armado = payload.find(p => p.dataKey === 'armado')?.value ?? 0
   const girado = payload.find(p => p.dataKey === 'girado')?.value ?? 0
   const pct    = armado > 0 ? ((girado / armado) * 100).toFixed(1) : '0.0'
-  const nombre = payload[0]?.payload?.proyecto ?? label
+  const fullName = payload[0]?.payload?.fullName ?? label
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg text-xs max-w-[260px]">
-      <p className="font-bold text-gray-700 mb-2 leading-snug">{nombre}</p>
+    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg text-xs max-w-[280px]">
+      <p className="font-bold text-gray-700 mb-2 leading-snug">{fullName}</p>
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
           <span className="text-gray-500">Compromiso:</span>
@@ -39,32 +55,49 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-export default function ProyectosChart({ proyectos }) {
-  const data = proyectos.slice(0, 15).map(p => {
-    const armado = Number(p.monto_armado)
-    const girado = Number(p.monto_girado)
-    const pct    = armado > 0 ? Number(((girado / armado) * 100).toFixed(1)) : 0
-    return {
-      name:     p.codi_Meta,
-      proyecto: p.PROYECTO,
-      armado,
-      girado,
-      pct,
-    }
-  })
+function PctLabel({ x, y, width, height, value }) {
+  if (!value || value <= 0 || width < 28) return null
+  return (
+    <text x={x + width - 4} y={y + height / 2 + 4} fill="white" textAnchor="end" fontSize={10} fontWeight="bold">
+      {value}%
+    </text>
+  )
+}
 
-  const PctLabel = ({ x, y, width, height, value }) => {
-    if (!value || value <= 0 || width < 30) return null
-    return (
-      <text x={x + width - 4} y={y + height / 2 + 4} fill="white" textAnchor="end" fontSize={10} fontWeight="bold">
-        {value}%
-      </text>
-    )
-  }
+export default function ProyectosChart({ proyectos }) {
+  // Separar ODEIS y agruparlas en una sola entrada
+  const odeis  = proyectos.filter(p =>  ES_ODEI(p.PROYECTO))
+  const otros  = proyectos.filter(p => !ES_ODEI(p.PROYECTO))
+
+  const odeiAgrupado = odeis.length > 0 ? {
+    PROYECTO: `ODEIS — Oficinas Departamentales (${odeis.length} regiones)`,
+    codi_Meta: 'ODEIS',
+    monto_armado: odeis.reduce((s, p) => s + Number(p.monto_armado), 0),
+    monto_girado: odeis.reduce((s, p) => s + Number(p.monto_girado), 0),
+  } : null
+
+  const todos = odeiAgrupado ? [...otros, odeiAgrupado] : otros
+
+  const data = todos
+    .sort((a, b) => Number(b.monto_armado) - Number(a.monto_armado))
+    .slice(0, 15)
+    .map(p => {
+      const armado = Number(p.monto_armado)
+      const girado = Number(p.monto_girado)
+      const pct    = armado > 0 ? Number(((girado / armado) * 100).toFixed(1)) : 0
+      const isOdei = ES_ODEI(p.PROYECTO) || p.codi_Meta === 'ODEIS'
+      return {
+        name:     isOdei ? 'ODEIS (26 regiones)' : shortName(p.PROYECTO),
+        fullName: p.PROYECTO,
+        armado,
+        girado,
+        pct,
+      }
+    })
 
   return (
     <ResponsiveContainer width="100%" height={420}>
-      <BarChart data={data} layout="vertical" margin={{ left: 8, right: 50, top: 5, bottom: 5 }} barGap={3}>
+      <BarChart data={data} layout="vertical" margin={{ left: 8, right: 55, top: 5, bottom: 5 }} barGap={3}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
         <XAxis
           type="number"
@@ -76,8 +109,8 @@ export default function ProyectosChart({ proyectos }) {
         <YAxis
           type="category"
           dataKey="name"
-          width={50}
-          tick={{ fontSize: 11, fill: '#6B7280', fontWeight: 600 }}
+          width={175}
+          tick={{ fontSize: 10.5, fill: '#374151' }}
           axisLine={false}
           tickLine={false}
         />
