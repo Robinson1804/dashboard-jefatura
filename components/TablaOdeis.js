@@ -94,7 +94,7 @@ export default function TablaOdeis({ odeis }) {
                 : 0
               // Extraer el nombre del departamento del proyecto (quitar prefijo)
               const nombreDept = odei.proyecto
-                .replace(/^ESTADISTICAS DEPARTAMENTALES?\s*[-–]?\s*/i, '')
+                .replace(/^ESTADISTICAS\s+DEPARTAMENTALES?\s*[-–]?\s*/i, '')
                 .trim() || odei.proyecto
 
               return (

@@ -127,6 +127,81 @@ function FilasLocadores({ proyecto }) {
   )
 }
 
+// ── Helpers ODEI ─────────────────────────────────────────────────────────────
+function esOdeiProyecto(proyecto) {
+  return /estadisticas\s+departamental/i.test(proyecto)
+}
+function nombreDeptCorto(proyecto) {
+  return proyecto.replace(/^ESTADISTICAS\s+DEPARTAMENTALES?\s*[-–]?\s*/i, '').trim() || proyecto
+}
+
+// ── Locadores de una ODEI expandida dentro del grupo ─────────────────────────
+function FilasOdeiLocadores({ odei }) {
+  return (
+    <tr>
+      <td colSpan={7} className="px-0 py-0 bg-violet-50 border-b border-violet-200">
+        <div className="mx-6 my-2">
+          <div className="text-xs text-violet-700 font-semibold mb-2 uppercase tracking-wide">
+            Locadores — {nombreDeptCorto(odei.proyecto)}
+          </div>
+          <FilasLocadores proyecto={odei} />
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+// ── Lista de ODEIs dentro del grupo expandido ─────────────────────────────────
+function FilasGrupoOdeis({ odeis }) {
+  const [odeiExpand, setOdeiExpand] = useState(null)
+
+  return (
+    <tr>
+      <td colSpan={7} className="px-0 py-0 bg-indigo-50 border-b border-indigo-200">
+        <div className="mx-4 my-3">
+          <div className="text-xs font-semibold text-indigo-700 mb-2 uppercase tracking-wide">
+            Oficinas Departamentales (ODEIs) — clic para ver locadores
+          </div>
+          <table className="w-full text-xs border border-indigo-200 rounded overflow-hidden">
+            <thead className="bg-indigo-100">
+              <tr>
+                <th className="w-6 px-2" />
+                <th className="px-3 py-2 text-left font-semibold text-indigo-800">ODEI</th>
+                <th className="px-3 py-2 text-right font-semibold text-indigo-800">Entregables</th>
+                <th className="px-3 py-2 text-right font-semibold text-indigo-800">Comprometido (S/)</th>
+                <th className="px-3 py-2 text-right font-semibold text-indigo-800">Girado (S/)</th>
+                <th className="px-3 py-2 font-semibold text-indigo-800 min-w-28">Avance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {odeis.map((odei, i) => {
+                const open = odeiExpand === odei.codi_Meta
+                const pct = odei.total_monto > 0 ? (odei.total_girado / odei.total_monto) * 100 : 0
+                return (
+                  <Fragment key={odei.codi_Meta}>
+                    <tr
+                      onClick={() => setOdeiExpand(open ? null : odei.codi_Meta)}
+                      className={`cursor-pointer border-t border-indigo-100 hover:bg-indigo-200/50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-indigo-50'} ${open ? 'bg-indigo-200/60' : ''}`}
+                    >
+                      <td className="px-2 text-center text-indigo-400">{open ? '▼' : '▶'}</td>
+                      <td className="px-3 py-2 font-semibold text-gray-800">{nombreDeptCorto(odei.proyecto)}</td>
+                      <td className="px-3 py-2 text-right text-gray-600">{odei.locadores.length}</td>
+                      <td className="px-3 py-2 text-right font-mono">{fmt(odei.total_monto)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-green-700">{fmt(odei.total_girado)}</td>
+                      <td className="px-3 py-2"><Barra pct={pct} /></td>
+                    </tr>
+                    {open && <FilasOdeiLocadores odei={odei} />}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 // ── Tabla de proyectos de un mes ─────────────────────────────────────────────
 function FilasProyectos({ drillData, loading }) {
   const [proyExpand, setProyExpand] = useState(null)
@@ -152,9 +227,28 @@ function FilasProyectos({ drillData, loading }) {
   if (!drillData) return null
 
   const { proyectos, totales } = drillData
+
+  // Separar proyectos normales de ODEIs
+  const normales = proyectos.filter(p => !esOdeiProyecto(p.proyecto))
+  const odeisLista = proyectos.filter(p => esOdeiProyecto(p.proyecto))
+    .sort((a, b) => nombreDeptCorto(a.proyecto).localeCompare(nombreDeptCorto(b.proyecto), 'es'))
+
+  // Grupo virtual para ODEIs
+  const grupoOdeis = odeisLista.length > 0 ? {
+    _esGrupoOdeis: true,
+    proyecto: 'ESTADÍSTICAS DEPARTAMENTALES',
+    codi_Meta: '__odeis__',
+    total_monto: odeisLista.reduce((a, o) => a + o.total_monto, 0),
+    total_girado: odeisLista.reduce((a, o) => a + o.total_girado, 0),
+    locadores: odeisLista.flatMap(o => o.locadores),
+  } : null
+
+  // Lista combinada: normales + grupo ODEIs al final
+  const lista = grupoOdeis ? [...normales, grupoOdeis] : normales
+
   const filtrados = busqueda.trim()
-    ? proyectos.filter(p => p.proyecto.toLowerCase().includes(busqueda.toLowerCase()) || p.codi_Meta.includes(busqueda))
-    : proyectos
+    ? lista.filter(p => p.proyecto.toLowerCase().includes(busqueda.toLowerCase()) || p.codi_Meta.includes(busqueda))
+    : lista
 
   return (
     <tr>
@@ -163,7 +257,7 @@ function FilasProyectos({ drillData, loading }) {
           {/* Resumen del mes */}
           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
             <div className="flex gap-4 text-xs text-gray-600">
-              <span>{proyectos.length} proyectos · <strong>{fmtN(totales.locadores)}</strong> entregables</span>
+              <span>{normales.length + (grupoOdeis ? 1 : 0)} proyectos{odeisLista.length > 0 ? ` · ${odeisLista.length} ODEIs` : ''} · <strong>{fmtN(totales.locadores)}</strong> entregables</span>
               <span>Comprometido: <strong className="text-blue-700">S/ {fmt(totales.monto)}</strong></span>
               <span>Girado: <strong className="text-green-700">S/ {fmt(totales.girado)}</strong></span>
               <span>Por girar: <strong className="text-amber-600">S/ {fmt(totales.monto - totales.girado)}</strong></span>
@@ -191,21 +285,36 @@ function FilasProyectos({ drillData, loading }) {
               {filtrados.map((p, i) => {
                 const open = proyExpand === p.codi_Meta
                 const pct = p.total_monto > 0 ? (p.total_girado / p.total_monto) * 100 : 0
+                const esGrupo = !!p._esGrupoOdeis
                 return (
                   <Fragment key={p.codi_Meta}>
                     <tr
                       onClick={() => setProyExpand(open ? null : p.codi_Meta)}
-                      className={`cursor-pointer border-t border-blue-100 hover:bg-blue-200/50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-blue-50'} ${open ? 'bg-blue-200/60' : ''}`}
+                      className={`cursor-pointer border-t border-blue-100 hover:bg-blue-200/50 transition-colors
+                        ${i % 2 === 0 ? 'bg-white' : 'bg-blue-50'}
+                        ${open ? 'bg-blue-200/60' : ''}
+                        ${esGrupo ? 'bg-indigo-50 border-l-2 border-l-indigo-400 font-semibold' : ''}`}
                     >
                       <td className="px-2 text-center text-blue-400 text-xs">{open ? '▼' : '▶'}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-gray-400">{p.codi_Meta}</td>
-                      <td className="px-3 py-2 text-xs font-medium max-w-xs truncate" title={p.proyecto}>{p.proyecto}</td>
-                      <td className="px-3 py-2 text-right text-gray-600">{p.locadores.length}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-gray-400">
+                        {esGrupo ? <span className="text-indigo-400">ODEIs</span> : p.codi_Meta}
+                      </td>
+                      <td className="px-3 py-2 text-xs font-medium max-w-xs truncate" title={p.proyecto}>
+                        {esGrupo
+                          ? <span className="text-indigo-700">{p.proyecto} <span className="font-normal text-indigo-400">({odeisLista.length})</span></span>
+                          : p.proyecto}
+                      </td>
+                      <td className="px-3 py-2 text-right text-gray-600">
+                        {esGrupo ? odeisLista.reduce((a, o) => a + o.locadores.length, 0) : p.locadores.length}
+                      </td>
                       <td className="px-3 py-2 text-right font-mono">{fmt(p.total_monto)}</td>
                       <td className="px-3 py-2 text-right font-mono text-green-700">{fmt(p.total_girado)}</td>
                       <td className="px-3 py-2"><Barra pct={pct} /></td>
                     </tr>
-                    {open && <FilasLocadores proyecto={p} />}
+                    {open && (esGrupo
+                      ? <FilasGrupoOdeis odeis={odeisLista} />
+                      : <FilasLocadores proyecto={p} />
+                    )}
                   </Fragment>
                 )
               })}
