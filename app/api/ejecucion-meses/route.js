@@ -5,11 +5,18 @@ import { getCached, setCached } from '@/lib/cache'
 const NOMBRES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-export async function GET() {
-  const cached = getCached('ejecucion_meses')
+export async function GET(request) {
+  const { searchParams } = new URL(request.url)
+  const proyecto = searchParams.get('proyecto') || null
+
+  const cacheKey = proyecto ? `ejecucion_meses:${proyecto}` : 'ejecucion_meses'
+  const cached = getCached(cacheKey)
   if (cached) return NextResponse.json(cached)
 
   try {
+    const whereExtra = proyecto ? ' AND proyecto = $1' : ''
+    const params     = proyecto ? [proyecto] : []
+
     const rows = await query(`
       SELECT
         EXTRACT(MONTH FROM fec_inicio_ar)::int                              AS mes,
@@ -19,12 +26,11 @@ export async function GET() {
         COUNT(CASE WHEN flag_girado = 1 THEN 1 END)                        AS entregables_girados,
         COUNT(CASE WHEN flag_girado IS NULL THEN 1 END)                     AS entregables_pendientes
       FROM detalle_cache
-      WHERE fec_inicio_ar IS NOT NULL
+      WHERE fec_inicio_ar IS NOT NULL${whereExtra}
       GROUP BY EXTRACT(MONTH FROM fec_inicio_ar)
       ORDER BY mes
-    `)
+    `, params)
 
-    // Crear array de 12 meses, rellenando con 0 los que no tienen datos
     const porMes = {}
     for (const r of rows) {
       porMes[r.mes] = {
@@ -52,7 +58,7 @@ export async function GET() {
     })
 
     const result = { meses }
-    setCached('ejecucion_meses', result)
+    setCached(cacheKey, result)
     return NextResponse.json(result)
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })

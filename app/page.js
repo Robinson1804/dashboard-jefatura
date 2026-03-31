@@ -10,7 +10,7 @@ function fmtM(n) {
 }
 
 // ── KPI card con fuente ───────────────────────────────────────────────────────
-function KpiCard({ titulo, valor, sub, fuente, color = 'blue' }) {
+function KpiCard({ titulo, valor, sub, sub2, fuente, color = 'blue' }) {
   const colores = {
     blue:   { border: 'border-blue-500',   text: 'text-blue-700',   badge: 'bg-blue-50 text-blue-600' },
     green:  { border: 'border-green-500',  text: 'text-green-700',  badge: 'bg-green-50 text-green-600' },
@@ -24,7 +24,8 @@ function KpiCard({ titulo, valor, sub, fuente, color = 'blue' }) {
     <div className={`bg-white rounded-lg shadow-sm border-l-4 p-4 ${c.border}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-1">{titulo}</p>
       <p className={`text-2xl font-bold ${c.text}`}>{valor}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub  && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub2 && <p className="text-xs font-semibold text-gray-600 mt-0.5">{sub2}</p>}
       {fuente && (
         <span className={`inline-block mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${c.badge}`}>
           {fuente}
@@ -138,16 +139,18 @@ export default function ResumenPage() {
   const { mef } = kpis
 
   return (
-    // Layout 3 columnas: cadena | contenido principal | semáforo
-    <div className="grid gap-4" style={{ gridTemplateColumns: '210px 1fr 210px' }}>
+    // Layout: contenido principal | semáforo (cadena oculta)
+    <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 210px' }}>
 
-      {/* ── Cadena presupuestal (izquierda, sticky) ── */}
-      <div className="sticky top-4 self-start">
-        <CadenaPresupuestal
-          mef={mef}
-          unete={{ monto_armado: kpis.monto_armado, monto_girado: kpis.monto_girado }}
-        />
-      </div>
+      {/* ── Cadena presupuestal — oculta temporalmente, no borrar ── */}
+      {false && (
+        <div className="sticky top-4 self-start">
+          <CadenaPresupuestal
+            mef={mef}
+            unete={{ monto_armado: kpis.monto_armado, monto_girado: kpis.monto_girado }}
+          />
+        </div>
+      )}
 
       {/* ── Centro ── */}
       <div className="space-y-4 min-w-0">
@@ -188,6 +191,7 @@ export default function ResumenPage() {
             titulo="Girado"
             valor={`S/ ${fmtM(kpis.monto_girado)}M`}
             sub={`${kpis.entregables_girados.toLocaleString()} entregables pagados`}
+            sub2={`${kpis.pct_ejecucion}% del PIM MEF`}
             fuente="Únete · tiempo real"
             color="green"
           />
