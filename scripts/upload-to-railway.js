@@ -7,10 +7,14 @@
  */
 
 const { Pool } = require('pg')
+const { ProxyAgent, fetch: undiciFetch } = require('undici')
 
 const RAILWAY_URL  = 'https://dashboard-app-production-c251.up.railway.app'
 const ADMIN_SECRET = '979e53fe1bbff1c027605c6aa82b4c418bc0d33c8fd5e98df55c51538673bbf6'
-const LOTE         = 200  // filas por request (más pequeño = más seguro con timeout)
+const PROXY        = 'http://mikasa.inei.gob.pe:3128'
+const LOTE         = 200
+
+const proxyAgent = new ProxyAgent({ uri: PROXY, requestTls: { rejectUnauthorized: false } })
 
 const pgLocal = new Pool({
   host: 'localhost', port: 5432,
@@ -19,10 +23,11 @@ const pgLocal = new Pool({
 })
 
 async function post(path, body) {
-  const res = await fetch(`${RAILWAY_URL}${path}`, {
+  const res = await undiciFetch(`${RAILWAY_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    dispatcher: proxyAgent,
   })
   return res.json()
 }
@@ -56,7 +61,8 @@ async function run() {
               n_entregable,ruc,
               monto_girado::text AS monto_girado,
               flag_girado,
-              fecha_girado::text AS fecha_girado
+              fecha_girado::text AS fecha_girado,
+              codestado
        FROM detalle_cache ORDER BY proyecto, nro_orden`
     )
     console.log(`     Leídas ${rows.length.toLocaleString()} filas`)

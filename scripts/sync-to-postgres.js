@@ -39,28 +39,51 @@ async function sync() {
     console.log('  Leyendo vista remota...')
     const rows = await queryMSSQL(MSSQL_CONN, `
       SELECT
-        RTRIM(PROYECTO)       AS proyecto,
-        RTRIM(codi_Meta)      AS codi_meta,
-        RTRIM(annio_Meta)     AS annio_meta,
-        RTRIM(NRO_ORDEN)      AS nro_orden,
-        RTRIM(PROVEEDOR)      AS proveedor,
-        CAST(ISNULL(MONTOARMADA, 0) AS FLOAT)                      AS monto_armada,
-        CONVERT(varchar, FEC_INICIO_AR, 23)                        AS fec_inicio_ar,
-        CONVERT(varchar, FEC_FIN_AR, 23)                           AS fec_fin_ar,
-        CONVERT(varchar, FECHA_INICIO, 23)                         AS fecha_inicio,
-        CONVERT(varchar, FECHA_FIN, 23)                            AS fecha_fin,
-        CONVERT(varchar, FECHA_BAJA, 23)                           AS fecha_baja,
-        ESTADO_CONTRATO,
-        RTRIM(ISNULL(N_EXPEDIENTE,''))                             AS n_expediente,
-        RTRIM(ISNULL(N_SUBEXPEDIENTE,''))                          AS n_subexpediente,
-        RTRIM(ISNULL(ANIO_EXPEDIENTE,''))                          AS anio_expediente,
-        RTRIM(ISNULL(N_ENTREGABLE,''))                             AS n_entregable,
-        RTRIM(ISNULL(RUC,''))                                      AS ruc,
-        CAST(ISNULL(MONTO_GIRADO, '0') AS FLOAT)                   AS monto_girado,
-        FLAG_GIRADO,
-        CONVERT(varchar, FECHA_GIRADO, 23)                         AS fecha_girado
-      FROM [dbo].[VISTA_DASHBOARD_DETALLE]
-      ORDER BY proyecto, nro_orden, CAST(n_entregable AS INT)
+        RTRIM(d.PROYECTO)       AS proyecto,
+        RTRIM(d.codi_Meta)      AS codi_meta,
+        RTRIM(d.annio_Meta)     AS annio_meta,
+        RTRIM(d.NRO_ORDEN)      AS nro_orden,
+        RTRIM(d.PROVEEDOR)      AS proveedor,
+        CAST(ISNULL(d.MONTOARMADA, 0) AS FLOAT)                    AS monto_armada,
+        CONVERT(varchar, d.FEC_INICIO_AR, 23)                      AS fec_inicio_ar,
+        CONVERT(varchar, d.FEC_FIN_AR, 23)                         AS fec_fin_ar,
+        CONVERT(varchar, d.FECHA_INICIO, 23)                       AS fecha_inicio,
+        CONVERT(varchar, d.FECHA_FIN, 23)                          AS fecha_fin,
+        CONVERT(varchar, d.FECHA_BAJA, 23)                         AS fecha_baja,
+        d.ESTADO_CONTRATO,
+        RTRIM(ISNULL(d.N_EXPEDIENTE,''))                           AS n_expediente,
+        RTRIM(ISNULL(d.N_SUBEXPEDIENTE,''))                        AS n_subexpediente,
+        RTRIM(ISNULL(d.ANIO_EXPEDIENTE,''))                        AS anio_expediente,
+        RTRIM(ISNULL(d.N_ENTREGABLE,''))                           AS n_entregable,
+        RTRIM(ISNULL(d.RUC,''))                                    AS ruc,
+        CAST(ISNULL(d.MONTO_GIRADO, '0') AS FLOAT)                 AS monto_girado,
+        d.FLAG_GIRADO,
+        CONVERT(varchar, d.FECHA_GIRADO, 23)                       AS fecha_girado,
+        g.CODESTADO                                                AS codestado
+      FROM [dbo].[VISTA_DASHBOARD_DETALLE] d
+      LEFT JOIN (
+        SELECT
+          RTRIM(N_EXPEDIENTE)    ne,
+          RTRIM(N_SUBEXPEDIENTE) ns,
+          RTRIM(ANIO_EXPEDIENTE) ae,
+          RTRIM(N_ENTREGABLE)    ent,
+          RTRIM(RUC)             ruc,
+          CODESTADO,
+          ROW_NUMBER() OVER (
+            PARTITION BY RTRIM(N_EXPEDIENTE),RTRIM(N_SUBEXPEDIENTE),
+                         RTRIM(ANIO_EXPEDIENTE),RTRIM(N_ENTREGABLE),RTRIM(RUC)
+            ORDER BY CODESTADO DESC
+          ) rn
+        FROM [BDSACD].[dbo].[VISTA_GIRADO_CONTRATACIONES]
+        WHERE RTRIM(ANIO_EXPEDIENTE) = '2026'
+      ) g
+        ON  RTRIM(d.N_EXPEDIENTE)    = g.ne
+        AND RTRIM(d.N_SUBEXPEDIENTE) = g.ns
+        AND RTRIM(d.ANIO_EXPEDIENTE) = g.ae
+        AND RTRIM(d.N_ENTREGABLE)    = g.ent
+        AND RTRIM(d.RUC)             = g.ruc
+        AND (g.rn = 1 OR g.rn IS NULL)
+      ORDER BY d.proyecto, d.nro_orden, CAST(d.n_entregable AS INT)
     `)
     console.log(`  Leídas ${rows.length.toLocaleString()} filas (${Date.now() - inicio}ms)`)
 
@@ -81,7 +104,7 @@ async function sync() {
       const params = []
       let p = 1
       for (const r of lote) {
-        valores.push(`($${p},$${p+1},$${p+2},$${p+3},$${p+4},$${p+5},$${p+6},$${p+7},$${p+8},$${p+9},$${p+10},$${p+11},$${p+12},$${p+13},$${p+14},$${p+15},$${p+16},$${p+17},$${p+18},$${p+19})`)
+        valores.push(`($${p},$${p+1},$${p+2},$${p+3},$${p+4},$${p+5},$${p+6},$${p+7},$${p+8},$${p+9},$${p+10},$${p+11},$${p+12},$${p+13},$${p+14},$${p+15},$${p+16},$${p+17},$${p+18},$${p+19},$${p+20})`)
         params.push(
           r.proyecto,
           r.codi_meta || null,
@@ -103,8 +126,9 @@ async function sync() {
           r.monto_girado || 0,
           r.FLAG_GIRADO ?? null,
           r.fecha_girado || null,
+          r.codestado ?? null,
         )
-        p += 20
+        p += 21
       }
 
       await pgClient.query(
@@ -112,7 +136,7 @@ async function sync() {
           (proyecto,codi_meta,annio_meta,nro_orden,proveedor,monto_armada,
            fec_inicio_ar,fec_fin_ar,fecha_inicio,fecha_fin,fecha_baja,
            estado_contrato,n_expediente,n_subexpediente,anio_expediente,
-           n_entregable,ruc,monto_girado,flag_girado,fecha_girado)
+           n_entregable,ruc,monto_girado,flag_girado,fecha_girado,codestado)
          VALUES ${valores.join(',')}`,
         params
       )

@@ -30,7 +30,7 @@ export async function POST(req) {
       const params  = []
       let p = 1
       for (const r of rows) {
-        valores.push(`($${p},$${p+1},$${p+2},$${p+3},$${p+4},$${p+5},$${p+6},$${p+7},$${p+8},$${p+9},$${p+10},$${p+11},$${p+12},$${p+13},$${p+14},$${p+15},$${p+16},$${p+17},$${p+18},$${p+19})`)
+        valores.push(`($${p},$${p+1},$${p+2},$${p+3},$${p+4},$${p+5},$${p+6},$${p+7},$${p+8},$${p+9},$${p+10},$${p+11},$${p+12},$${p+13},$${p+14},$${p+15},$${p+16},$${p+17},$${p+18},$${p+19},$${p+20})`)
         params.push(
           r.proyecto, r.codi_meta||null, r.annio_meta||null, r.nro_orden||null,
           r.proveedor||null, r.monto_armada||0,
@@ -40,15 +40,16 @@ export async function POST(req) {
           r.n_expediente||null, r.n_subexpediente||null, r.anio_expediente||null,
           r.n_entregable||null, r.ruc||null,
           r.monto_girado||0, r.flag_girado??null, r.fecha_girado||null,
+          r.codestado??null,
         )
-        p += 20
+        p += 21
       }
       await client.query(
         `INSERT INTO detalle_cache
            (proyecto,codi_meta,annio_meta,nro_orden,proveedor,monto_armada,
             fec_inicio_ar,fec_fin_ar,fecha_inicio,fecha_fin,fecha_baja,
             estado_contrato,n_expediente,n_subexpediente,anio_expediente,
-            n_entregable,ruc,monto_girado,flag_girado,fecha_girado)
+            n_entregable,ruc,monto_girado,flag_girado,fecha_girado,codestado)
          VALUES ${valores.join(',')}`,
         params
       )

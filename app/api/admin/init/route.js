@@ -33,6 +33,7 @@ export async function POST(req) {
         monto_girado     NUMERIC(18,2),
         flag_girado      SMALLINT,
         fecha_girado     DATE,
+        codestado        INTEGER,
         sincronizado_en  TIMESTAMP DEFAULT NOW()
       )
     `)
@@ -42,6 +43,7 @@ export async function POST(req) {
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_ruc         ON detalle_cache(ruc)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_flag_girado ON detalle_cache(flag_girado)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_dc_fecha_fin   ON detalle_cache(fecha_fin)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_dc_codestado   ON detalle_cache(codestado)`)
 
     const [{ count }] = await query(`SELECT COUNT(*) AS count FROM detalle_cache`)
     return NextResponse.json({ ok: true, filas_actuales: Number(count) })
