@@ -8,7 +8,10 @@ const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
 function fmtM(n) {
-  return (Number(n) / 1_000_000).toFixed(2)
+  const v = Number(n)
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`
+  if (v >= 1_000)     return `${(v / 1_000).toFixed(1)}K`
+  return `${v.toFixed(0)}`
 }
 
 function KpiCard({ titulo, valor, sub, sub2, color = 'blue' }) {
@@ -173,22 +176,22 @@ export default function EjecucionPage() {
           <div className="grid grid-cols-4 gap-4">
             <KpiCard
               titulo="Compromiso Anual"
-              valor={`S/ ${fmtM(t.certificacion)}M`}
+              valor={`S/ ${fmtM(t.certificacion)}`}
               sub={`${metasFiltradas.length} metas comprometidas`}
               sub2="Total año fiscal 2026"
               color="indigo"
             />
             <KpiCard
               titulo={`ACM ${MESES[mes]}`}
-              valor={`S/ ${fmtM(t.acm)}M`}
+              valor={`S/ ${fmtM(t.acm)}`}
               sub={`Entregables con inicio en ${MESES[mes]}`}
               color="purple"
             />
             <KpiCard
               titulo={`Girado ${MESES[mes]}`}
-              valor={`S/ ${fmtM(t.girado)}M`}
+              valor={`S/ ${fmtM(t.girado)}`}
               sub={`${avanceMesPct}% del ACM de ${MESES[mes]}`}
-              sub2={`Girado anual acumulado: S/ ${fmtM(t.girado_anual)}M`}
+              sub2={`Girado anual acumulado: S/ ${fmtM(t.girado_anual)}`}
               color="green"
             />
             <KpiCard
@@ -214,7 +217,7 @@ export default function EjecucionPage() {
                   Ejecución por meta — {MESES[mes]}
                   {proyecto && <span className="ml-2 text-sm font-normal text-gray-500">({proyecto})</span>}
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-sm text-gray-500 mt-0.5">
                   Girado y avance calculados sobre ACM del mes seleccionado · Expandir fila para ver locadores por RUC
                 </p>
               </div>

@@ -14,7 +14,7 @@ export default function Navbar() {
     <header className="bg-[#1B3A6B] text-white shadow-md">
       <div className="max-w-screen-xl mx-auto px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="font-bold text-lg tracking-wide">INEI · OTIN</div>
+          <div className="font-bold text-lg tracking-wide">INEI</div>
           <span className="text-blue-300 text-sm hidden sm:block">Dashboard de Ejecución Presupuestal 2026</span>
         </div>
         <nav className="flex gap-1">

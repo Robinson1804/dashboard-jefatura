@@ -7,8 +7,10 @@ import {
 const MESES_CORTO = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
                      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-function fmtMillones(v) {
-  return `S/ ${(v / 1_000_000).toFixed(2)}M`
+function fmtDinero(v) {
+  if (v >= 1_000_000) return `S/ ${(v / 1_000_000).toFixed(2)}M`
+  if (v >= 1_000)     return `S/ ${(v / 1_000).toFixed(0)}K`
+  return `S/ ${Number(v).toFixed(0)}`
 }
 
 function CustomTooltip({ active, payload, label }) {
@@ -19,8 +21,8 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
       <p className="font-bold text-gray-700 mb-2">{label}</p>
-      <p style={{ color: '#93C5FD' }} className="text-sm">ACM: {fmtMillones(acm)}</p>
-      <p style={{ color: '#16A34A' }} className="text-sm">Girado: {fmtMillones(girado)}</p>
+      <p style={{ color: '#93C5FD' }} className="text-sm">ACM: {fmtDinero(acm)}</p>
+      <p style={{ color: '#16A34A' }} className="text-sm">Girado: {fmtDinero(girado)}</p>
       <p className="text-xs text-gray-500 mt-1 pt-1 border-t border-gray-100 font-semibold">
         Avance: {pct}%
       </p>
@@ -71,10 +73,15 @@ export default function EjecucionChart({ meses, titulo }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
           <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#6B7280' }} axisLine={false} tickLine={false} />
           <YAxis
-            tickFormatter={v => `S/${(v/1_000_000).toFixed(1)}M`}
+            tickFormatter={v => {
+              if (v === 0) return 'S/ 0'
+              if (v >= 1_000_000) return `S/${(v/1_000_000).toFixed(1)}M`
+              if (v >= 1_000)     return `S/${(v/1_000).toFixed(0)}K`
+              return `S/${v}`
+            }}
             tick={{ fontSize: 11, fill: '#9CA3AF' }}
             axisLine={false} tickLine={false}
-            width={70}
+            width={72}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend

@@ -208,7 +208,7 @@ export default function TablaEjecucion({ metas, totales, mes }) {
                         </div>
                         <Barra pct={avancePct} color={C.bar} />
                         {m.certificacion > 0 && (
-                          <p className="text-[10px] text-gray-400 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             Avance anual: {((m.girado_anual / m.certificacion) * 100).toFixed(1)}%
                           </p>
                         )}
@@ -252,7 +252,7 @@ export default function TablaEjecucion({ metas, totales, mes }) {
                     </div>
                     <Barra pct={pct} color={C.bar} />
                     {totales.certificacion > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         Avance anual: {((totales.girado_anual / totales.certificacion) * 100).toFixed(1)}%
                       </p>
                     )}
