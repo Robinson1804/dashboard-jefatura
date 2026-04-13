@@ -3,6 +3,8 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import AuthGuard from '@/components/AuthGuard'
 
+export const dynamic = 'force-dynamic'
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
