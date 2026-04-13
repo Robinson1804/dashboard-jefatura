@@ -213,8 +213,14 @@ export default function ResumenPage() {
 
         {/* Gráfico */}
         <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-1">Top 15 proyectos — Compromiso Anual vs Girado</h2>
-          <p className="text-xs text-gray-400 mb-4">Fuente: Únete · Datos en tiempo real</p>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-gray-700">Top 15 proyectos — Compromiso Anual vs Girado</h2>
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-2 rounded-sm bg-blue-200"></span>Compromiso</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-2 rounded-sm bg-emerald-500"></span>Girado</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">Fuente: Únete · Montos en soles · % = Girado / Compromiso</p>
           <ProyectosChart proyectos={proyectos} />
         </div>
 
